@@ -1,0 +1,25 @@
+0. Uc13' - (Uc13 - Uc13^n-1)
+1. Uc14' - (Uc14 - Uc14^n-1)
+2. Uc11' - (Uc11 - Uc11^n-1)
+3. Il' - (Il - Il^n-1)
+
+4. Ur2 - Uc11
+5. Ur3 - Uc14 + Uc11 + Ur1
+6. Ul - Ue -Uc13 + Uc14
+7. Ui - Uc11
+
+8. Ie + Il
+9. Ic13 + Il
+10. Ic14 + Ir3 - Il
+11. Ic11 + Ir2 - Ir3 +Il
+12. Ir1 - Ir3
+
+13. Ir2 * R2 - Ur2
+14. Ir3 * R3 - Ur3
+15. Il - L * Il'
+16. Id - it * (exp( Ur2 / Mft ) - 1)
+17. Ue - E;
+18. Ic13 - C13 * Uc13'
+19. Ic14 - C14 * Uc14'
+20. Ic11 - C11 * Uc11'
+21. Ur1  - R1 * Ir1

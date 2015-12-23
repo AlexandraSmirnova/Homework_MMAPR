@@ -1,0 +1,12 @@
+set terminal x11 size 1360, 700
+set title 'Result'
+set xlabel "X"
+set ylabel "Y"
+set xrange [0.0:1e-4]
+set yrange [-5e-9:5e-9]
+set grid
+plot 'f_uC11.txt' using 1:2 w l lw 2 title 'uC11',\
+'f_uC13.txt' using 1:2 w l lw 2 title 'uC13',\
+'f_uC14.txt' using 1:2 w p lw 2 title 'uC14', \
+'f_iL.txt' using 1:2 w p lw 2 title 'Il' 
+pause -1
