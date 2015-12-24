@@ -38,8 +38,9 @@ void print_array(T* array, int size_x, int size_y){
 	int i, j;	
   
 	for(j = 0; j < size_y; j++){
-		for(i = 0 ; i < size_x ; i++)
+		for(i = 0 ; i < size_x ; i++){
 			printf("%5.1lf ", array[size_x * j + i]);
+		}
 		printf("\n\n");
 	}
 }
@@ -50,10 +51,11 @@ void print_array_to_file(T* array, int size_x, int size_y, FILE* fp){
   
 	for(j = 0; j < size_y; j++){
 		for(i = 0 ; i < size_x ; i++)
-			if(array[size_x * j + i] > 1e-2 || array[size_x * j + i] == 0. )
+			if(array[size_x * j + i] > 1e-2 || array[size_x * j + i] == 0. ){
 				fprintf(fp, "%4.lf", array[size_x * j + i]);
-			else
+			} else {
 				fprintf(fp, "%e", array[size_x * j + i]);
+			}
 		fprintf(fp, "\n\n");
 	}
 }
@@ -74,8 +76,9 @@ void deside_slay(double* matrix, double* B, double* result){
 	result[size - 1] = B[size - 1];
 	for(i = size - 2; i >= 0; i--){
 		result[i] = B[i]; 
-		for(j = size - 1; j > i; j--)
+		for(j = size - 1; j > i; j--){
 			result[i] -= matrix[size * i + j] * result[j];
+		}
 	}
 }
 
@@ -88,8 +91,9 @@ void gauss(double* result, double *B){
 	for(i = 0; i < size_y; i++){
 		start = result[size_x * i + i];
 			
-		for(k = i; k < size_x; k++)
+		for(k = i; k < size_x; k++){
 			result[size_x*i + k] /= start;   // деление i=ой строки, чтобы ведущий элемент был равен 1
+		}
 		B[i] /= start;
 
 		for(j = i + 1; j < size_y; j++){
@@ -113,8 +117,9 @@ void fill_yakobi_matrix (double* jakobi, double d_dt, double* vars_last_iter){
 
 	for ( k = 0; k < diagonal; k++) {
 		for (h = 0; h < diagonal; h++) {
-			if(k == h)
+			if(k == h){
 				jakobi[N * k + h] = 1.;
+			}
 		}
 	}
 
@@ -165,10 +170,10 @@ void fill_yakobi_matrix (double* jakobi, double d_dt, double* vars_last_iter){
 
 // функция заполняет вектор значений функции
 void fill_func_values(double* func_values, double* bVars, double* last_altVars, double dt){
-	func_values[0]  = - (bVars[0]  - (bVars[18] - last_altVars[0]) / dt);		 
-	func_values[1]  = - (bVars[1]  - (bVars[19] - last_altVars[1]) / dt);
-	func_values[2]  = - (bVars[2]  - (bVars[20] - last_altVars[2]) / dt);
-	func_values[3]  = - (bVars[3]  - (bVars[15] - last_altVars[3]) / dt);
+	func_values[0]  = - (bVars[0]  - (bVars[18] - last_altVars[18]) / dt);		 
+	func_values[1]  = - (bVars[1]  - (bVars[19] - last_altVars[19]) / dt);
+	func_values[2]  = - (bVars[2]  - (bVars[20] - last_altVars[20]) / dt);
+	func_values[3]  = - (bVars[3]  - (bVars[15] - last_altVars[15]) / dt);
 
 	func_values[4]	= - (bVars[4]  - bVars[20]);
 	func_values[5]  = - (bVars[5]  - bVars[19] + bVars[20] + bVars[21]);
@@ -200,37 +205,30 @@ void fill_base_vars(double* deltas, double* bVars){
 }
 
 // возвращаемся к изначальным значениям при неудачном шаге
-void to_last_step(double* bVars, double* last_steps){
+void to_last_step(double* bVars, double* last_step){
 	for (int i = 0; i < N; i++){
-		bVars[i] = last_steps[2 * i + 1];
+		bVars[i] = last_step[i];
 	}
 }
 
 // проверка локальной точности. Если шаг удачный вернет true
-int check_local_eps(double* dt, double* last_dt, double* last_steps, double* current_step){
+int check_local_eps(double* dt, double* last_dt, double* last_step, double* last_but_one, double* current_step){
 	double eps1  = 0.01;
-	double eps2  = 0.05;
-    // Проверь эту формулу
-	double local_eps = fabs(current_step[4] - last_steps[2 * 4 + 1] -
-                                    (*dt) * (last_steps[2 * 4 + 1]  - last_steps[2 * 4 + 0] ) / ((*dt) + (*last_dt)));
-
-    // У меня вот такая формула
+	double eps2  = 0.05;      
     double fcur = current_step[4];
-    double fprev = last_steps[2 * 4 + 0];
-    double flast = last_steps[2 * 4 + 1];
-    local_eps = fabs( (*dt / (*dt + *last_dt)) * (fcur - flast - (*dt / *last_dt) * (flast - fprev)));
+    double fprev = last_but_one[4];
+    double flast = last_step[4];
+    double local_eps = fabs( (*dt / (*dt + *last_dt)) * (fcur - flast - (*dt / *last_dt) * (flast - fprev)));
 
-	// printf("local_eps: %.12e\n", local_eps);
+	//printf("local_eps: %.12e\n", local_eps);
 	if (local_eps < eps1){
 		(*last_dt) = (*dt);
 		(*dt) = 2 * (*dt);
 		return true;
-	}
-	else if (local_eps < eps2){
+	} else if (local_eps < eps2){
 		(*last_dt) = (*dt);
 		return true;
-	}
-	else {
+	} else {
 		(*dt) = (*dt) / 2;
 	}	
 	return false;
@@ -238,24 +236,20 @@ int check_local_eps(double* dt, double* last_dt, double* last_steps, double* cur
 
 // сохраняем значения на предыдущем шаге, чтобы можно было проверить точность и вернуться к этим значениям
 // при неудачном шаге
-void save_last_step(double* current, double* last_steps, double* last_altVars){
+void save_last_step(double* current, double* last_step, double* last_but_one){
 	for (int i = 0 ; i < N ; i++){
-		last_steps[2 * i + 0] = last_steps[2 * i + 1];
-		last_steps[2 * i + 1] = current[i];
-	}
-	last_altVars[0] = current[18];
-	last_altVars[1] = current[19];
-	last_altVars[2] = current[20];
-	last_altVars[3] = current[15];
+		last_but_one[i] = last_step[i];
+		last_step[i] = current[i];
+	}	
 }
 
 int main(){
 	double bVars[N];				// массив, содержащий базисные переменные
 	double delta_bVars[N];			// массив, сожержащий дельты базисных переменных
 	double func_values[N];			// вектор значений функции
-	double jakobi[N * N];			// матрица якоби
-	double last_altVars[M];			// массив, содержащий переменные состояния на предыдущем шаге	
-	double last_steps_bVars[N * 2];	// массив, хранящий последные 2 точки для каждой переменной
+	double jakobi[N * N];			// матрица якоби	
+	double last_step_bVars[N];  	// массив, хранящий последний шаг для каждой переменной
+	double last_but_one_bVars[N];  	// массив, хранящий предпоследний шаг для каждой переменной
 	double dt = 1e-9;				// шаг интегрирования
 	double last_dt = 1e-9;			// переменная для хранения предыдущего 
 	double max_time = 1e-7;			// максимальное время интегрирования
@@ -266,9 +260,9 @@ int main(){
 	int count_steps = 0;	
 
 	init_array(bVars, 1, N);
-	init_array(delta_bVars, 1, N);
-	init_array(last_altVars, 1, M);
-	init_array(last_steps_bVars, 2, N);	
+	init_array(delta_bVars, 1, N);	
+	init_array(last_step_bVars, 1, N);	
+	init_array(last_but_one_bVars, 1, N);	
 
 	FILE* f_uC13;
 	FILE* f_uC14;
@@ -277,31 +271,31 @@ int main(){
 	FILE* f_dt;
 	FILE* f_matrix;
 		
-	f_uC13 = fopen("f_uC13.txt", "w");
-	f_uC14 = fopen("f_uC14.txt", "w");
-	f_uC11 = fopen("f_uC11.txt", "w");
-	f_iL   = fopen("f_iL.txt", "w");
-	f_dt = fopen("f_dt.txt", "w");
-	f_matrix = fopen("f_matrix.txt", "w");
+	f_uC13 = fopen("out/f_uC13.txt", "w");
+	f_uC14 = fopen("out/f_uC14.txt", "w");
+	f_uC11 = fopen("out/f_uC11.txt", "w");
+	f_iL   = fopen("out/f_iL.txt", "w");
+	f_dt = fopen("out/f_dt.txt", "w");
+	f_matrix = fopen("out/f_matrix.txt", "w");
 
 	
 	while(time < max_time) {
-		// цикл шага
+		
 		iteration_num = 0;
 
 		do {
 			fill_yakobi_matrix(jakobi, dt, bVars);
-			fill_func_values(func_values, bVars, last_altVars, dt);
+			fill_func_values(func_values, bVars, last_step_bVars, dt);
 			// весь следующий if - исключительно для отладки )
-//			if(count_steps < 100) {
-//				fprintf(f_dt,"time = %.12e, iter = %d, dt = %e\n", time, iteration_num, dt);
-//				fprintf(f_matrix,"time = %.12e, iter = %d, dt = %e\n", time, iteration_num, dt);
-//				print_array_to_file(jakobi, N, N,f_matrix);
-//				fprintf(f_matrix, "Deltas: \t Functions\n");
-//				for(int j = 0; j < N; j++){
-//					fprintf(f_matrix, "%e\t%e\n", delta_bVars[j], func_values[j]);
-//				}
-//			}
+			if(count_steps < 100) {
+				fprintf(f_dt,"time = %.12e, iter = %d, dt = %e\n", time, iteration_num, dt);
+				fprintf(f_matrix,"time = %.12e, iter = %d, dt = %e\n", time, iteration_num, dt);
+				print_array_to_file(jakobi, N, N,f_matrix);
+				fprintf(f_matrix, "Deltas: \t Functions\n");
+				for(int j = 0; j < N; j++){
+					fprintf(f_matrix, "%e\t%e\n", delta_bVars[j], func_values[j]);
+				}
+			}
 
 			gauss(jakobi, func_values);
 			deside_slay(jakobi, func_values, delta_bVars);	
@@ -319,13 +313,14 @@ int main(){
 
             // Это также является условием того, что итерация успешно, поэтому должно быть внутри цикла.
             // Это такая же проверка как и сделанная тобою проверка выше
-            if (endFlag)
-                endFlag = check_local_eps(&dt, &last_dt, last_steps_bVars, bVars);
+            if (endFlag){
+                endFlag = check_local_eps(&dt, &last_dt, last_step_bVars, last_but_one_bVars, bVars);
+            }
 
 			if(!endFlag){
 				if(iteration_num > 6){
 					dt /= 2;
-					to_last_step(bVars, last_steps_bVars);
+					to_last_step(bVars, last_step_bVars);
 					iteration_num = 0;
 				}
 			}
@@ -336,7 +331,7 @@ int main(){
             printf("Time:%e, Step:%d,  dt = %e\n", time ,count_steps, dt );
         }
 
-        save_last_step(bVars, last_steps_bVars, last_altVars);
+        save_last_step(bVars, last_step_bVars, last_but_one_bVars);
         print_vars(f_uC13, f_uC14, f_uC11, f_iL, bVars, time);
         time += dt;
         count_steps += 1;
