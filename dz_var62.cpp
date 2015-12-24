@@ -194,15 +194,15 @@ void fill_func_values(double* func_values, double* bVars, double* last_altVars, 
 
 // заполнение массива базисных переменных 
 void fill_base_vars(double* deltas, double* bVars){	
-	for(int i = 0 ; i < N ; i++){
+	for(int i = 0; i < N; i++){
 		bVars[i] += deltas[i]; 
 	}
 }
 
 // возвращаемся к изначальным значениям при неудачном шаге
 void to_last_step(double* bVars, double* last_steps){
-	for (int i = 0 ; i < N ; i++){
-		bVars[i] = last_steps[ 2 * i + 1];
+	for (int i = 0; i < N; i++){
+		bVars[i] = last_steps[2 * i + 1];
 	}
 }
 
@@ -210,7 +210,15 @@ void to_last_step(double* bVars, double* last_steps){
 int check_local_eps(double* dt, double* last_dt, double* last_steps, double* current_step){
 	double eps1  = 0.01;
 	double eps2  = 0.05;
-	double local_eps = fabs(current_step[4] - last_steps[2 * 4 + 1] - (*dt) * (last_steps[2 * 4 + 1]  - last_steps[2 * 4 + 0] ) / ((*dt) + (*last_dt)));
+    // Проверь эту формулу
+	double local_eps = fabs(current_step[4] - last_steps[2 * 4 + 1] -
+                                    (*dt) * (last_steps[2 * 4 + 1]  - last_steps[2 * 4 + 0] ) / ((*dt) + (*last_dt)));
+
+    // У меня вот такая формула
+    double fcur = current_step[4];
+    double fprev = last_steps[2 * 4 + 0];
+    double flast = last_steps[2 * 4 + 1];
+    local_eps = fabs( (*dt / (*dt + *last_dt)) * (fcur - flast - (*dt / *last_dt) * (flast - fprev)));
 
 	// printf("local_eps: %.12e\n", local_eps);
 	if (local_eps < eps1){
@@ -223,7 +231,7 @@ int check_local_eps(double* dt, double* last_dt, double* last_steps, double* cur
 		return true;
 	}
 	else {
-		(*dt) = (*dt) / 2 ;
+		(*dt) = (*dt) / 2;
 	}	
 	return false;
 }
@@ -269,12 +277,12 @@ int main(){
 	FILE* f_dt;
 	FILE* f_matrix;
 		
-	f_uC13 = fopen("out/f_uC13.txt", "w");
-	f_uC14 = fopen("out/f_uC14.txt", "w");
-	f_uC11 = fopen("out/f_uC11.txt", "w");
-	f_iL   = fopen("out/f_iL.txt", "w");
-	f_dt = fopen("out/f_dt.txt", "w");	
-	f_matrix = fopen("out/f_matrix.txt", "w");
+	f_uC13 = fopen("f_uC13.txt", "w");
+	f_uC14 = fopen("f_uC14.txt", "w");
+	f_uC11 = fopen("f_uC11.txt", "w");
+	f_iL   = fopen("f_iL.txt", "w");
+	f_dt = fopen("f_dt.txt", "w");
+	f_matrix = fopen("f_matrix.txt", "w");
 
 	
 	while(time < max_time) {
@@ -285,19 +293,22 @@ int main(){
 			fill_yakobi_matrix(jakobi, dt, bVars);
 			fill_func_values(func_values, bVars, last_altVars, dt);
 			// весь следующий if - исключительно для отладки )
-			if(count_steps < 100) {
-				fprintf(f_dt,"time = %.12e, iter = %d, dt = %e\n", time, iteration_num, dt);
-				fprintf(f_matrix,"time = %.12e, iter = %d, dt = %e\n", time, iteration_num, dt);
-				print_array_to_file(jakobi, N, N,f_matrix);				
-				fprintf(f_matrix, "Deltas: \t Functions\n");
-				for(int j = 0; j < N; j++){
-					fprintf(f_matrix, "%e\t%e\n", delta_bVars[j], func_values[j]);
-				}
-			}
+//			if(count_steps < 100) {
+//				fprintf(f_dt,"time = %.12e, iter = %d, dt = %e\n", time, iteration_num, dt);
+//				fprintf(f_matrix,"time = %.12e, iter = %d, dt = %e\n", time, iteration_num, dt);
+//				print_array_to_file(jakobi, N, N,f_matrix);
+//				fprintf(f_matrix, "Deltas: \t Functions\n");
+//				for(int j = 0; j < N; j++){
+//					fprintf(f_matrix, "%e\t%e\n", delta_bVars[j], func_values[j]);
+//				}
+//			}
 
 			gauss(jakobi, func_values);
 			deside_slay(jakobi, func_values, delta_bVars);	
-			fill_base_vars(delta_bVars, bVars);					
+			fill_base_vars(delta_bVars, bVars);
+
+            // В любом случае ты инкриментируешь счетчик
+            iteration_num += 1;
 
 			endFlag = true;
 			for(int i = 0; i < N; i++){
@@ -306,40 +317,30 @@ int main(){
 				}
 			}
 
+            // Это также является условием того, что итерация успешно, поэтому должно быть внутри цикла.
+            // Это такая же проверка как и сделанная тобою проверка выше
+            if (endFlag)
+                endFlag = check_local_eps(&dt, &last_dt, last_steps_bVars, bVars);
+
 			if(!endFlag){
-				if(iteration_num >= 6){
+				if(iteration_num > 6){
 					dt /= 2;
 					to_last_step(bVars, last_steps_bVars);
 					iteration_num = 0;
 				}
-				else{
-					iteration_num += 1;
-				}
 			}
-		}
-		while(!endFlag);
+		} while(!endFlag);
 
-		// проверка удачливости шага
-		endFlag = check_local_eps(&dt, &last_dt, last_steps_bVars, bVars);
-		if(endFlag){
-			// шаг удался
+        // Соответсвтенно тут уже логика сохранения успешного шага.
+        if(count_steps % 10000 == 0){
+            printf("Time:%e, Step:%d,  dt = %e\n", time ,count_steps, dt );
+        }
 
-			// отладочный вывод
-			if(count_steps % 10000 == 0){
-				printf("Time:%e, Step:%d,  dt = %e\n", time ,count_steps, dt );												
-			}
-
-			save_last_step(bVars, last_steps_bVars, last_altVars);			
-			print_vars(f_uC13, f_uC14, f_uC11, f_iL, bVars, time);
-			time += dt;
-			count_steps += 1;			
-		}
-		else{			
-			// шаг был неудачным
-			to_last_step(bVars, last_steps_bVars);
-		}
-				
-	}
+        save_last_step(bVars, last_steps_bVars, last_altVars);
+        print_vars(f_uC13, f_uC14, f_uC11, f_iL, bVars, time);
+        time += dt;
+        count_steps += 1;
+    }
 
 	fclose(f_uC13);
 	fclose(f_uC14);
