@@ -27,9 +27,9 @@ template <class T>
 void init_array(T* array, int size_x, int size_y){
 	int i, j;	
 
-	for( j=0; j < size_y; j++)
-		for( i =0 ; i < size_x ; i++){			
-			array[size_x*j+i] = 0.;			
+	for(j = 0; j < size_y; j++)
+		for(i = 0 ; i < size_x ; i++){
+			array[size_x * j + i] = 0.;
 		}
 }
 
@@ -37,8 +37,8 @@ template <class T>
 void print_array(T* array, int size_x, int size_y){
 	int i, j;	
   
-	for(  j =0; j < size_y; j++){
-		for( i =0 ; i < size_x ; i++)
+	for(j = 0; j < size_y; j++){
+		for(i = 0 ; i < size_x ; i++)
 			printf("%5.1lf ", array[size_x * j + i]);
 		printf("\n\n");
 	}
@@ -48,8 +48,8 @@ template <class T>
 void print_array_to_file(T* array, int size_x, int size_y, FILE* fp){
 	int i, j;	
   
-	for(  j =0; j < size_y; j++){
-		for( i =0 ; i < size_x ; i++)
+	for(j = 0; j < size_y; j++){
+		for(i = 0 ; i < size_x ; i++)
 			if(array[size_x * j + i] > 1e-2 || array[size_x * j + i] == 0. )
 				fprintf(fp, "%4.lf", array[size_x * j + i]);
 			else
@@ -71,11 +71,11 @@ void deside_slay(double* matrix, double* B, double* result){
 	int i, j, k, size = N;		
 
 	// обратный ход Гаусса
-	result[size-1] = B[size-1];
-	for( i = size-2; i >= 0; i-- ){
+	result[size - 1] = B[size - 1];
+	for(i = size - 2; i >= 0; i--){
 		result[i] = B[i]; 
-		for( j= size-1 ; j > i; j-- )			
-			result[i] -=matrix[size*i+j] * result[j];
+		for(j = size - 1; j > i; j--)
+			result[i] -= matrix[size * i + j] * result[j];
 	}
 }
 
@@ -85,20 +85,20 @@ void gauss(double* result, double *B){
 	int i = 0, j, size_x = N, size_y = N ;
 	int k = 0;
 
-	for( i = 0; i <size_y; i++){
-		start = result[size_x*i + i];
+	for(i = 0; i < size_y; i++){
+		start = result[size_x * i + i];
 			
-		for ( k = i; k < size_x; k++)
+		for(k = i; k < size_x; k++)
 			result[size_x*i + k] /= start;   // деление i=ой строки, чтобы ведущий элемент был равен 1
 		B[i] /= start;
 
-		for ( j =i+1; j < size_y ; j++){								
-			temp = result[size_x*j + i];
+		for(j = i + 1; j < size_y; j++){
+			temp = result[size_x * j + i];
 					
-			for(  k = 0; k < size_x; k++){
-				result[size_x*j+k] -= result[size_x*i+k]*temp;
+			for(k = 0; k < size_x; k++){
+				result[size_x * j + k] -= result[size_x * i + k] * temp;
 			}
-			B[j] -=B[i]*temp;					
+			B[j] -= B[i] * temp;
 		} 
 	}
 }
@@ -210,7 +210,7 @@ void to_last_step(double* bVars, double* last_steps){
 int check_local_eps(double* dt, double* last_dt, double* last_steps, double* current_step){
 	double eps1  = 0.01;
 	double eps2  = 0.05;
-	double local_eps = abs(current_step[4] - last_steps[2 * 4 + 1]- (*dt) * ( last_steps[2 * 4 + 1]  - last_steps[2 * 4 + 0] ) / ((*dt) + (*last_dt)) ) ;
+	double local_eps = fabs(current_step[4] - last_steps[2 * 4 + 1] - (*dt) * (last_steps[2 * 4 + 1]  - last_steps[2 * 4 + 0] ) / ((*dt) + (*last_dt)));
 
 	// printf("local_eps: %.12e\n", local_eps);
 	if (local_eps < eps1){
@@ -232,8 +232,8 @@ int check_local_eps(double* dt, double* last_dt, double* last_steps, double* cur
 // при неудачном шаге
 void save_last_step(double* current, double* last_steps, double* last_altVars){
 	for (int i = 0 ; i < N ; i++){
-		last_steps[ 2 * i + 0] = last_steps[ 2 * i + 1];
-		last_steps[ 2 * i + 1] = current[i];    
+		last_steps[2 * i + 0] = last_steps[2 * i + 1];
+		last_steps[2 * i + 1] = current[i];
 	}
 	last_altVars[0] = current[18];
 	last_altVars[1] = current[19];
@@ -277,20 +277,20 @@ int main(){
 	f_matrix = fopen("out/f_matrix.txt", "w");
 
 	
-	while(time < max_time ) {				
+	while(time < max_time) {
 		// цикл шага
-		iteration_num = 0;	
+		iteration_num = 0;
 
-		do{			
+		do {
 			fill_yakobi_matrix(jakobi, dt, bVars);
 			fill_func_values(func_values, bVars, last_altVars, dt);
 			// весь следующий if - исключительно для отладки )
-			if(count_steps < 100){
-				fprintf(f_dt,"time = %.12e, iter = %d, dt = %e\n", time, iteration_num, dt  );
-				fprintf(f_matrix,"time = %.12e, iter = %d, dt = %e\n", time, iteration_num, dt  );
+			if(count_steps < 100) {
+				fprintf(f_dt,"time = %.12e, iter = %d, dt = %e\n", time, iteration_num, dt);
+				fprintf(f_matrix,"time = %.12e, iter = %d, dt = %e\n", time, iteration_num, dt);
 				print_array_to_file(jakobi, N, N,f_matrix);				
 				fprintf(f_matrix, "Deltas: \t Functions\n");
-				for(int j = 0 ; j < N ; j++ ){
+				for(int j = 0; j < N; j++){
 					fprintf(f_matrix, "%e\t%e\n", delta_bVars[j], func_values[j]);
 				}
 			}
@@ -300,22 +300,22 @@ int main(){
 			fill_base_vars(delta_bVars, bVars);					
 
 			endFlag = true;
-			for(int i = 0; i < N ; i++){
+			for(int i = 0; i < N; i++){
 				if(fabs(delta_bVars[i]) >= eps){
 					endFlag = false;
 				}
 			}
 
-			if(!endFlag){			
-				if(iteration_num >= 6){					
+			if(!endFlag){
+				if(iteration_num >= 6){
 					dt /= 2;
 					to_last_step(bVars, last_steps_bVars);
 					iteration_num = 0;
 				}
 				else{
-					iteration_num += 1;					
+					iteration_num += 1;
 				}
-			}									
+			}
 		}
 		while(!endFlag);
 
