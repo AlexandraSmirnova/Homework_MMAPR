@@ -3,7 +3,7 @@ set title 'Result'
 set xlabel "X"
 set ylabel "Y"
 set xrange [0.0:1e-3]
-set yrange [-5e-13:5e-13]
+set yrange [-4e-15:-2e-15]
 set grid
 plot 'f_uC14.txt' using 1:2 w l lw 2 title 'uC14'
 pause -1

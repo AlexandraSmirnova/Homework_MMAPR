@@ -9,7 +9,7 @@
 #define HORDES  4	// количество хорд
 
 // параметры элементов схемы
-#define C13 1e-8 				// c1
+#define C13 1e-7 				// c1
 #define C14 1e-7 				// c2
 
 #define L 1e-3
@@ -52,9 +52,9 @@ void print_array_to_file(T* array, int size_x, int size_y, FILE* fp){
 	for(j = 0; j < size_y; j++){
 		for(i = 0 ; i < size_x ; i++)
 			if(array[size_x * j + i] > 1e-2 || array[size_x * j + i] == 0. ){
-				fprintf(fp, "%4.lf", array[size_x * j + i]);
+				fprintf(fp, " %3.lf", array[size_x * j + i]);
 			} else {
-				fprintf(fp, "%e", array[size_x * j + i]);
+				fprintf(fp, " %3.1e", array[size_x * j + i]);
 			}
 		fprintf(fp, "\n\n");
 	}
@@ -62,48 +62,38 @@ void print_array_to_file(T* array, int size_x, int size_y, FILE* fp){
 
 // вывод переменных для дальнейшего построения грайиков в гнуплоте
 void print_vars(FILE* f_u13, FILE* f_u14, FILE* f_u11, FILE* f_il,double* vars, double time){
-	fprintf(f_u13, "%.10lf %.30lf\n", time, vars[0]);
-	fprintf(f_u14, "%.10lf %.30lf\n", time, vars[1]);
-	fprintf(f_u11, "%.10lf %.30lf\n", time, vars[2]);
-	fprintf(f_il, "%.10lf %.30lf\n", time, vars[3]);
+	fprintf(f_u13, "%.10lf %.30lf\n", time, vars[18]);
+	fprintf(f_u14, "%.10lf %.30lf\n", time, vars[19]);
+	fprintf(f_u11, "%.10lf %.30lf\n", time, vars[20]);
+	fprintf(f_il, "%.10lf %.30lf\n", time, vars[6]);
 }
 
-// решение матрицы 
-void deside_slay(double* matrix, double* B, double* result){
-	int i, j, k, size = N;		
-
-	// обратный ход Гаусса
-	result[size - 1] = B[size - 1];
-	for(i = size - 2; i >= 0; i--){
-		result[i] = B[i]; 
-		for(j = size - 1; j > i; j--){
-			result[i] -= matrix[size * i + j] * result[j];
+void solve(double* mas, double* mas1, double* x){
+	x[N - 1] = mas1[N - 1] / mas[(N - 1) * N +  N - 1];
+	for (int i = N - 2; i >= 0; i--){
+		x[i] = mas1[i];
+		for (int j = N - 2; j >= i; j--){
+			x[i] = x[i] - mas[i * N + j + 1] * x[j + 1];
 		}
-	}
+		x[i] = x[i] / mas[i * N + i];
+	}    
 }
 
-// метод Гаусса для матрицы коэффициентов
-void gauss(double* result, double *B){
-	double start, temp;
-	int i = 0, j, size_x = N, size_y = N ;
-	int k = 0;
+void gauss(double* Y, double* B){	   
+	double c = 0;
 
-	for(i = 0; i < size_y; i++){
-		start = result[size_x * i + i];
-			
-		for(k = i; k < size_x; k++){
-			result[size_x*i + k] /= start;   // деление i=ой строки, чтобы ведущий элемент был равен 1
-		}
-		B[i] /= start;
+	for (int k = 0; k < N; k++){
+		for (int i = k + 1; i < N; i++){
+			c = -Y[i * N + k] / Y[k * N + k];
+			B[i] = B[i] + B[k] * c;
 
-		for(j = i + 1; j < size_y; j++){
-			temp = result[size_x * j + i];
-					
-			for(k = 0; k < size_x; k++){
-				result[size_x * j + k] -= result[size_x * i + k] * temp;
+			for (int j = k; j < N; j++){  			
+				Y[i * N + j] = Y[i * N + j] + Y[k * N + j] * c;
+				if (k == 19 && i ==21 && j == 19){
+					Y[i * N + j] = 0.0;
+				}
 			}
-			B[j] -= B[i] * temp;
-		} 
+		}
 	}
 }
 
@@ -111,8 +101,7 @@ void fill_yakobi_matrix (double* jakobi, double d_dt, double* vars_last_iter){
 	int i, j, k, h;
 	int diagonal = BRANCHES + HORDES + M;
 	double a = - It_d11 * (exp(vars_last_iter[4] / MFt_d11 ) ) / MFt_d11;
-
-	//printf("a: %e, deltas[4]: %e\n", a, vars_last_iter[4]);
+	
 	init_array(jakobi, N, N);
 
 	for ( k = 0; k < diagonal; k++) {
@@ -150,12 +139,12 @@ void fill_yakobi_matrix (double* jakobi, double d_dt, double* vars_last_iter){
 
 	// нижняя часть матрицы
 	jakobi[N * 13 + 4]  = -1.;
-	jakobi[N * 13 + 13] = Rb_d11;
+	jakobi[N * 13 + 13] = R_d11;
 	jakobi[N * 14 + 5]  = -1.;
 	jakobi[N * 14 + 14] = R;
 	jakobi[N * 15 + 3]  = -L;
 	jakobi[N * 15 + 6]  = 1.;
-	jakobi[N * 16 + 7]  = a;
+	jakobi[N * 16 + 4]  = a;
 	jakobi[N * 16 + 16] = 1.;
 	jakobi[N * 17 + 17] = 1.;
 	jakobi[N * 18 + 0]  = -C13;
@@ -164,8 +153,8 @@ void fill_yakobi_matrix (double* jakobi, double d_dt, double* vars_last_iter){
 	jakobi[N * 19 + 10] = 1.;
 	jakobi[N * 20 + 2]  = -C_d11;
 	jakobi[N * 20 + 11] = 1.;
-	jakobi[N * 21 + 12] = R_d11;
-	jakobi[N * 21 + 21] = -1.;
+	jakobi[N * 21 + 12] = -Rb_d11;
+	jakobi[N * 21 + 21] = 1.;
 }
 
 // функция заполняет вектор значений функции
@@ -183,18 +172,18 @@ void fill_func_values(double* func_values, double* bVars, double* last_altVars, 
 	func_values[8]  = - (bVars[8]  + bVars[15]);
 	func_values[9]  = - (bVars[9]  + bVars[15]);
 	func_values[10] = - (bVars[10] + bVars[14] - bVars[15]);
-	func_values[11] = - (bVars[11] + bVars[13] - bVars[14] + bVars[15]);
+	func_values[11] = - (bVars[11] + bVars[13] - bVars[14] + bVars[16]);
 	func_values[12] = - (bVars[12] - bVars[14]);
 
-	func_values[13] = - (bVars[13] * Rb_d11 - bVars[4]);
+	func_values[13] = - (bVars[13] * R_d11 - bVars[4]);
 	func_values[14] = - (bVars[14] * R - bVars[5]);
-	func_values[15] = - (bVars[15] - L * bVars[3]);
+	func_values[15] = - (bVars[6]  - L * bVars[3]);
 	func_values[16] = - (bVars[16] - It_d11 * (exp(bVars[4] / MFt_d11) - 1.));
 	func_values[17] = - (bVars[17] - E);
 	func_values[18] = - (bVars[9]  - C13 * bVars[0] );
 	func_values[19] = - (bVars[10] - C14 * bVars[1]);
-	func_values[20] = - (bVars[11] - C_d11 * bVars[3]);
-	func_values[21] = - (- bVars[21] + R_d11 * bVars[12]);
+	func_values[20] = - (bVars[11] - C_d11 * bVars[2]);
+	func_values[21] = - (bVars[21] - Rb_d11 * bVars[12]);
 }
 
 // заполнение массива базисных переменных 
@@ -205,22 +194,23 @@ void fill_base_vars(double* deltas, double* bVars){
 }
 
 // возвращаемся к изначальным значениям при неудачном шаге
-void to_last_step(double* bVars, double* last_step){
+void to_last_step(double* bVars, double* last_step, double* last_but_one){
 	for (int i = 0; i < N; i++){
 		bVars[i] = last_step[i];
+		last_step[i] = last_but_one[i]; 
 	}
 }
 
 // проверка локальной точности. Если шаг удачный вернет true
 int check_local_eps(double* dt, double* last_dt, double* last_step, double* last_but_one, double* current_step){
-	double eps1  = 0.01;
-	double eps2  = 0.05;      
-    double fcur = current_step[4];
-    double fprev = last_but_one[4];
-    double flast = last_step[4];
-    double local_eps = fabs( (*dt / (*dt + *last_dt)) * (fcur - flast - (*dt / *last_dt) * (flast - fprev)));
+	double eps1  = 0.001;
+	double eps2  = 0.005;      
+	double fcur = current_step[4];
+	double fprev = last_but_one[4];
+	double flast = last_step[4];
+	double local_eps = fabs( (*dt / (*dt + *last_dt)) * (fcur - flast - (*dt / *last_dt) * (flast - fprev)));
+	double dt_max = 1e-5;
 
-	//printf("local_eps: %.12e\n", local_eps);
 	if (local_eps < eps1){
 		(*last_dt) = (*dt);
 		(*dt) = 2 * (*dt);
@@ -252,17 +242,12 @@ int main(){
 	double last_but_one_bVars[N];  	// массив, хранящий предпоследний шаг для каждой переменной
 	double dt = 1e-9;				// шаг интегрирования
 	double last_dt = 1e-9;			// переменная для хранения предыдущего 
-	double max_time = 1e-7;			// максимальное время интегрирования
-	double eps = 0.01;				// eps для метода Ньютона
+	double max_time = 1e-2;			// максимальное время интегрирования
+	double eps = 1e-5;				// eps для метода Ньютона
 	double time = 0;
 	int endFlag = false;	
 	int iteration_num = 0;
-	int count_steps = 0;	
-
-	init_array(bVars, 1, N);
-	init_array(delta_bVars, 1, N);	
-	init_array(last_step_bVars, 1, N);	
-	init_array(last_but_one_bVars, 1, N);	
+	int count_steps = 0;		
 
 	FILE* f_uC13;
 	FILE* f_uC14;
@@ -270,72 +255,92 @@ int main(){
 	FILE* f_iL;	
 	FILE* f_dt;
 	FILE* f_matrix;
-		
+	FILE* f_matrix2;		
+
 	f_uC13 = fopen("out/f_uC13.txt", "w");
 	f_uC14 = fopen("out/f_uC14.txt", "w");
 	f_uC11 = fopen("out/f_uC11.txt", "w");
 	f_iL   = fopen("out/f_iL.txt", "w");
-	f_dt = fopen("out/f_dt.txt", "w");
+	f_dt   = fopen("out/f_dt.txt", "w");
 	f_matrix = fopen("out/f_matrix.txt", "w");
-
+	f_matrix2 = fopen("out/f_matrix2.txt", "w");
 	
+	init_array(bVars, 1, N);
+	init_array(delta_bVars, 1, N);	
+	init_array(last_step_bVars, 1, N);	
+	init_array(last_but_one_bVars, 1, N);
+
 	while(time < max_time) {
 		
 		iteration_num = 0;
 
 		do {
 			fill_yakobi_matrix(jakobi, dt, bVars);
-			fill_func_values(func_values, bVars, last_step_bVars, dt);
-			// весь следующий if - исключительно для отладки )
-			if(count_steps < 100) {
-				fprintf(f_dt,"time = %.12e, iter = %d, dt = %e\n", time, iteration_num, dt);
+			fill_func_values(func_values, bVars, last_step_bVars, dt);						
+			gauss(jakobi, func_values);
+
+			if(count_steps < 100) {				
 				fprintf(f_matrix,"time = %.12e, iter = %d, dt = %e\n", time, iteration_num, dt);
 				print_array_to_file(jakobi, N, N,f_matrix);
 				fprintf(f_matrix, "Deltas: \t Functions\n");
 				for(int j = 0; j < N; j++){
 					fprintf(f_matrix, "%e\t%e\n", delta_bVars[j], func_values[j]);
 				}
-			}
+			} 
 
-			gauss(jakobi, func_values);
-			deside_slay(jakobi, func_values, delta_bVars);	
+			solve(jakobi, func_values, delta_bVars);										
 			fill_base_vars(delta_bVars, bVars);
-
-            // В любом случае ты инкриментируешь счетчик
-            iteration_num += 1;
+          
+			iteration_num += 1;
 
 			endFlag = true;
-			for(int i = 0; i < N; i++){
+			for(int i = 4; i < N; i++){
 				if(fabs(delta_bVars[i]) >= eps){
 					endFlag = false;
 				}
 			}
 
-            // Это также является условием того, что итерация успешно, поэтому должно быть внутри цикла.
-            // Это такая же проверка как и сделанная тобою проверка выше
-            if (endFlag){
-                endFlag = check_local_eps(&dt, &last_dt, last_step_bVars, last_but_one_bVars, bVars);
-            }
+			if (endFlag){
+				endFlag = check_local_eps(&dt, &last_dt, last_step_bVars, last_but_one_bVars, bVars);				
+			}
 
 			if(!endFlag){
-				if(iteration_num > 6){
+				if(iteration_num >= 6){
 					dt /= 2;
-					to_last_step(bVars, last_step_bVars);
+					to_last_step(bVars, last_step_bVars, last_but_one_bVars);
 					iteration_num = 0;
 				}
 			}
 		} while(!endFlag);
 
-        // Соответсвтенно тут уже логика сохранения успешного шага.
-        if(count_steps % 10000 == 0){
-            printf("Time:%e, Step:%d,  dt = %e\n", time ,count_steps, dt );
-        }
+		// Соответсвенно тут уже логика сохранения успешного шага.
+		/*endFlag = check_local_eps(&dt, &last_dt, last_step_bVars, last_but_one_bVars, bVars);
+		if(endFlag){
+			// шаг удался 
+			// отладочный вывод
+			if(count_steps % 10000 == 0){
+				printf("Time:%e, Step:%d,  dt = %e\n", time ,count_steps, dt );												
+			}
+ 
+			save_last_step(bVars, last_step_bVars,  last_but_one_bVars);			
+			print_vars(f_uC13, f_uC14, f_uC11, f_iL, bVars, time);
+			time += dt;
+			count_steps += 1;			
+		}
+		else{			
+			// шаг был неудачным
+			to_last_step(bVars, last_step_bVars,  last_but_one_bVars);
+		}
+		*/
+		if(count_steps % 10000 == 0){
+			printf("Time:%e, Step:%d,  dt = %e\n", time ,count_steps, dt );
+		}
 
-        save_last_step(bVars, last_step_bVars, last_but_one_bVars);
-        print_vars(f_uC13, f_uC14, f_uC11, f_iL, bVars, time);
-        time += dt;
-        count_steps += 1;
-    }
+		save_last_step(bVars, last_step_bVars, last_but_one_bVars);
+		print_vars(f_uC13, f_uC14, f_uC11, f_iL, bVars, time);
+		time += dt;
+		count_steps += 1;
+	}
 
 	fclose(f_uC13);
 	fclose(f_uC14);
@@ -343,5 +348,6 @@ int main(){
 	fclose(f_iL);	
 	fclose(f_dt);
 	fclose(f_matrix);	
+	fclose(f_matrix2);	
 	return 0;
 }
